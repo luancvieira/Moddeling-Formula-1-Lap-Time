@@ -1,0 +1,418 @@
+---
+title: "Bayesian Models"
+author: "Luan Vieira"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r,message=FALSE}
+library(MCMCvis)
+library("R2jags")
+library("readxl")
+library("AICcmodavg")
+```
+
+Loading data
+
+```{r, message = FALSE}
+df = read_excel("./files/Races_cleaned.xlsx")
+df$TyreType = as.factor(df$TyreType)
+one_hot_encoded = model.matrix(~TyreType - 1, df)
+df = cbind(df,one_hot_encoded)
+```
+
+Setting parameters for jags models
+
+```{r, message = FALSE}
+y = as.numeric(unlist(df[,'msLapTime']))
+x1 = as.numeric(unlist(df[,'LapNumber']))
+x2 = as.numeric(unlist(df[,'TyreLife']))
+x3_1 = as.factor(unlist(df[,'TyreTypeC1']))
+x3_2 = as.factor(unlist(df[,'TyreTypeC2']))
+x3_3 = as.factor(unlist(df[,'TyreTypeC3']))
+x3_4 = as.factor(unlist(df[,'TyreTypeC4']))
+x3_5 = as.factor(unlist(df[,'TyreTypeC5']))
+x4 = as.numeric(unlist(df[,'GridPosition']))
+x5 = as.numeric(unlist(df[,'CircuitLength']))
+c <- as.factor(unlist(df['EventName']))
+d <- as.factor(unlist(df['LastName']))
+n <- length(y)
+n_circuits <- length(unlist(unique(df['EventName'])))
+n_drivers <- length(unlist(unique(df['LastName'])))
+```
+
+Optional - load previously run models
+
+```{r,message=FALSE}
+load("./files/Models/modelo 1b.rda")
+load("./files/Models/modelo 2b.rda")
+load("./files/Models/modelo 3b.rda")
+load("./files/Models/modelo 4b.rda")
+load("./files/Models/modelo 5b.rda")
+```
+
+Modelo 1
+
+```{r, message = FALSE}
+mod_1 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- 0 + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i] 
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.01)
+  b2 ~ dnorm(0,0.01)
+  b3_1 ~ dnorm(0,0.01)
+  b3_2 ~ dnorm(0,0.01)
+  b3_3 ~ dnorm(0,0.01)
+  b3_4 ~ dnorm(0,0.01)
+  b3_5 ~ dnorm(0,0.01)
+  b4 ~ dnorm(0,0.01)
+  b5 ~ dnorm(0,0.01)
+ 
+  tau.y <- pow(sigma.y,-2)
+  sigma.y ~ dgamma(1,1)
+}"
+```
+
+```{r, message = FALSE}
+writeLines(mod_1, "./files/Models/mod_1.jags")
+data_1 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n") 
+param_1 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y") 
+```
+
+```{r, message = FALSE}
+inits_1 <- function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1)
+}
+```
+
+```{r, message = FALSE}
+mod1.jags <- jags(data = data_1,
+                  inits = inits_1,
+                  parameters.to.save = param_1,
+                  n.iter = 5000,
+                  n.chains = 4,
+                  model.file = "./files/Models/mod_1.jags")
+save(mod1.jags, file = "./files/Models/modelo 1b.rda")
+```
+
+```{r message=FALSE}
+mod1.jags$BUGSoutput$summary
+mod1.jags$BUGSoutput$DIC
+```
+
+Modelo 2
+
+```{r, message = FALSE}
+mod_2 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b5 * x5[i]) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.01)
+  b2 ~ dnorm(0,0.01)
+  b3_1 ~ dnorm(0,0.01)
+  b3_2 ~ dnorm(0,0.01)
+  b3_3 ~ dnorm(0,0.01)
+  b3_4 ~ dnorm(0,0.01)
+  b3_5 ~ dnorm(0,0.01)
+  b4 ~ dnorm(0,0.01)
+  b5 ~ dnorm(0,0.01)
+  
+  tau.y <- pow(sigma.y,-2)
+  sigma.y ~ dgamma(1,1)
+}"
+```
+
+```{r, message = FALSE}
+writeLines(mod_2, "./files/Models/mod_2.jags")
+data_2 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","x5") #Adiciona x5
+param_2 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5") #adiciona b5 
+```
+
+```{r, message = FALSE}
+inits_2 <- function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5"= 1, sigma.y = 1)
+}
+```
+
+```{r, message = FALSE}
+mod2.jags <- jags(data = data_2,
+                  inits = inits_2,
+                  parameters.to.save = param_2,
+                  n.iter = 5000,
+                  n.chains = 4,
+                  model.file = "./files/Models/mod_2.jags")
+
+save(mod2.jags, file = "./files/Models/modelo 2b.rda")
+```
+
+```{r, message = FALSE}
+mod2.jags$BUGSoutput$summary
+mod2.jags$BUGSoutput$DIC
+```
+
+Modelo 3
+
+```{r, message = FALSE}
+mod_3 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b5 * x5[i] + int_circuito[c[i]]) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]  # adiciona int_circuito[c[i]]
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+      }
+  
+  #prior
+  b1 ~ dnorm(0,0.01)
+  b2 ~ dnorm(0,0.01)
+  b3_1 ~ dnorm(0,0.01)
+  b3_2 ~ dnorm(0,0.01)
+  b3_3 ~ dnorm(0,0.01)
+  b3_4 ~ dnorm(0,0.01)
+  b3_5 ~ dnorm(0,0.01)
+  b4 ~ dnorm(0,0.01)
+  b5 ~ dnorm(0,0.01)
+  tau.y <- pow(sigma.y,-2)
+  sigma.y ~ dgamma(1,1)
+  
+  
+  
+  for (c in 1:n_circuits){
+    tau.u[c] <- pow(sigma.u[c],-2)
+    sigma.u[c] ~ dgamma(1,1)
+}
+  
+}"
+```
+
+```{r, message = FALSE}
+writeLines(mod_3, "./files/Models/mod_3.jags")
+data_3 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits") #Adiciona c, n_circuits
+param_3 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u") #adiciona sigma.u
+```
+
+```{r, message = FALSE}
+inits_3 <- function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits)) #adiciona sigma.u = rep(1,n_circuits)
+}
+```
+
+```{r, message = FALSE}
+mod3.jags <- jags(data = data_3,
+                  inits = inits_3,
+                  parameters.to.save = param_3,
+                  n.iter = 5000,
+                  n.chains = 4,
+                  model.file = "./files/Models/mod_3.jags")
+
+save(mod3.jags, file = "./files/Models/modelo 3b.rda")
+```
+
+```{r, message = FALSE}
+mod3.jags$BUGSoutput$summary
+mod3.jags$BUGSoutput$DIC
+```
+
+Modelo 4
+
+```{r, message = FALSE}
+mod_4 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b5 * x5[i] + int_circuito[c[i]] + int_piloto[d[i]]) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]  # adiciona int_piloto[d[i]]
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+  }
+      
+  for (d in 1:n_drivers){
+        int_piloto[d] ~ dnorm(0,tau.v[d])
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.01)
+  b2 ~ dnorm(0,0.01)
+  b3_1 ~ dnorm(0,0.01)
+  b3_2 ~ dnorm(0,0.01)
+  b3_3 ~ dnorm(0,0.01)
+  b3_4 ~ dnorm(0,0.01)
+  b3_5 ~ dnorm(0,0.01)
+  b4 ~ dnorm(0,0.01)
+  b5 ~ dnorm(0,0.01)
+  
+  tau.y <- pow(sigma.y,-2)
+  sigma.y ~ dgamma(1,1)
+  
+  for (c in 1:n_circuits){
+    tau.u[c] <- pow(sigma.u[c],-2)
+    sigma.u[c] ~ dgamma(1,1)
+  }
+
+  for (d in 1:n_drivers){
+    tau.v[d] <- pow(sigma.v[d],-2)
+    sigma.v[d] ~ dgamma(1,1)
+  }
+  
+
+}"
+
+```
+
+```{r, message = FALSE}
+writeLines(mod_4, "./files/Models/mod_4.jags")
+data_4 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") #Adiciona d, n_drivers
+param_4 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u","sigma.v") #adiciona sigma.u
+```
+
+```{r, message = FALSE}
+inits_4 <- function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits), sigma.v = rep(1,n_drivers))
+}
+```
+
+```{r, message = FALSE}
+mod4.jags <- jags(data = data_4,
+                  inits = inits_4,
+                  parameters.to.save = param_4,
+                  n.iter = 5000,
+                  n.chains = 4,
+                  model.file = "./files/Models/mod_4.jags")
+
+save(mod4.jags, file = "./files/Models/modelo 4b.rda")
+```
+
+```{r, message = FALSE}
+mod4.jags$BUGSoutput$summary
+mod4.jags$BUGSoutput$DIC
+```
+
+Modelo 5
+
+```{r, message = FALSE}
+mod_5 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b5 * x5[i] + int_circuito[c[i]] + int_piloto[d[i]])  + (b1 + slope_circuito[c[i]]) * x1[i] + b2*x2[i] + b3_1 * x3_1[i] + b3_2 * x3_2[i] + b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]  # adiciona slope_circuito[c[i]]
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+        slope_circuito[c] ~ dnorm(0,tau.w[c])
+  }
+      
+  for (d in 1:n_drivers){
+        int_piloto[d] ~ dnorm(0,tau.v[d])
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.01)
+  b2 ~ dnorm(0,0.01)
+  b3_1 ~ dnorm(0,0.01)
+  b3_2 ~ dnorm(0,0.01)
+  b3_3 ~ dnorm(0,0.01)
+  b3_4 ~ dnorm(0,0.01)
+  b3_5 ~ dnorm(0,0.01)
+  b4 ~ dnorm(0,0.01)
+  b5 ~ dnorm(0,0.01)
+  
+  tau.y <- pow(sigma.y,-2)
+  sigma.y ~ dgamma(1,1)
+  
+  for (c in 1:n_circuits){
+    tau.u[c] <- pow(sigma.u[c],-2)
+    sigma.u[c] ~ dgamma(1,1)
+      tau.w[c] <- pow(sigma.w[c],-2)
+    sigma.w[c] ~ dgamma(1,1)
+  }
+
+  for (d in 1:n_drivers){
+    tau.v[d] <- pow(sigma.v[d],-2)
+    sigma.v[d] ~ dgamma(1,1)
+  }
+  
+
+}"
+
+```
+
+```{r, message = FALSE}
+writeLines(mod_5, "./files/Models/mod_5.jags")
+data_5 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") 
+param_5 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u","sigma.v","sigma.w") #adiciona sigma.w
+```
+
+```{r, message = FALSE}
+inits_5 <- function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits), sigma.v = rep(1,n_drivers), sigma.w = rep(1,n_circuits))
+}
+```
+
+```{r, message = FALSE}
+mod5.jags <- jags(data = data_5,
+                  inits = inits_5,
+                  parameters.to.save = param_5,
+                  n.iter = 5000,
+                  n.chains = 4,
+                  model.file = "./files/Models/mod_5.jags")
+
+save(mod5.jags, file = "./files/Models/modelo 5b.rda")
+```
+
+```{r, message = FALSE}
+mod5.jags$BUGSoutput$summary
+mod5.jags$BUGSoutput$DIC
+```
+
+```{r, message = FALSE}}
+MCMCplot(object = mod5.jags,
+         params = c('b1','b2','b3_1','b3_2','b3_3','b3_4','b3_5','b4','b5','sigma.y'), 
+         labels = c('LapNumber','TyreLife','C1','C2','C3','C4','C5','GridPosition','CircuitLength','sigma y'),
+         ci = c(2.5,97.5))
+```
+
+```{r, message = FALSE}
+MCMCplot(object = mod5.jags,
+         params = "sigma.u", 
+         labels = levels(c),
+         main = "Circuit Intercept",
+         ci = c(2.5,97.5))
+```
+
+```{r, message = FALSE}
+MCMCplot(object = mod5.jags,
+         params = "sigma.v", 
+         labels = levels(d),
+         main = "Driver Intercept",
+         ci = c(2.5,97.5))
+```
+
+```{r, message = FALSE}
+MCMCplot(object = mod5.jags,
+         params = "sigma.w", 
+         labels = levels(c),
+         main = "Circuit LapNumber Slope",
+         ci = c(2.5,97.5))
+
+```
