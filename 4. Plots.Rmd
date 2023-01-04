@@ -1,11 +1,14 @@
 ---
 title: "Plotting LapTime for Formula 1 2022 World Competition"
 author: "Luan Vieira"
-output: html_document
+output:  
+  html_document:
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+fig.path = "figures/README-"
 ```
 
 Data Prep
