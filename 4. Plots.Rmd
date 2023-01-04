@@ -55,7 +55,7 @@ ggplot(df, aes(x=msLapTime)) +
 
 Scatter Plot
 
-```{r,out.width="100%"}
+```{r,out.width="100%",message=FALSE}
 plot <- ggplot(df, aes (x = LapNumber, y = msLapTime))+
   geom_point(alpha = 0.2) + 
   geom_smooth(method = lm,se = F)+ 
@@ -67,7 +67,7 @@ plot
 
 Scatter Plot grouped by Circuit as color
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 plotCircuit <- ggplot(df, aes(x = LapNumber, y = msLapTime, color = Local))+
   geom_point(alpha = 0.2)+
   geom_smooth(method = lm,se = F) + 
@@ -81,7 +81,7 @@ plotCircuit
 
 Scatter Plot of each circuit separately
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 plotWrapEventos <- ggplot(df, aes (x = LapNumber, y = msLapTime))+
   geom_point(alpha = 0.2) + 
   geom_smooth(method = lm,se = F)+ 
@@ -91,18 +91,17 @@ plotWrapEventos <- ggplot(df, aes (x = LapNumber, y = msLapTime))+
 
 plotWrapEventos
 ```
-
 Behavior for each lap
 
 Filtering Dutch Grand Prix for exemplification purposed.
 
-```{r,message = FALSE}
+```{r}
 df_dutch = df[df[,"Local"] == "Holanda",]
 ```
 
 Creating auxiliary data grouped by Driver (LastName) to plot stints separately.
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 dataLine1 <- df_dutch %>%
   group_by(LastName) %>%
   summarize(line1 = mean(Stint_1))
@@ -134,7 +133,7 @@ dataLine7 <- df_dutch %>%
 
 Plotting Dutch GP LapTimes for each driver, specifying Tyre and Stints.
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 plotHolanda <- ggplot(df_dutch, aes (x = LapNumber, y = msLapTime, col = TyreType, linecolor = "red",group = 1))+
   geom_point(alpha = 0.2) + 
   geom_line() +
@@ -158,7 +157,7 @@ Explain behaviour.
 
 Boxplot: Laptimes for each circuit
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 boxplotCircuits <- ggplot(df,aes(x = Local, y = msLapTime)) +
   scale_y_continuous(label=timeHMS_formatter, breaks = c(70000,80000,90000,100000,110000,120000)) +
   geom_boxplot() + 
@@ -170,13 +169,13 @@ boxplotCircuits
 
 Boxplot: Laptimes for each driver
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 df_color = df[c("Team","TeamColor")]
 df_color = unique(df_color)
 df_color = df_color[order(df_color$Team),]
 ```
 
-```{r,out.width="100%",message = FALSE}
+```{r,out.width="100%",message=FALSE}
 boxplotDriver <- ggplot(df,aes(x = LastName, y = msLapTime,fill = Team)) +
   scale_y_continuous(label=timeHMS_formatter, breaks = c(70000,80000,90000,100000,110000,120000)) +
   geom_boxplot() + 
@@ -189,9 +188,9 @@ boxplotDriver <- ggplot(df,aes(x = LastName, y = msLapTime,fill = Team)) +
 
 boxplotDriver
 ```
-Fastest Laps for each race
+Fastest lap for each race
 
-```{r}
+```{r,message=FALSE}
 fastest_laps = data.frame()
 for (event in unique(df$EventName)){
   x = df[df$EventName == event,] %>%
@@ -201,4 +200,5 @@ fastest_laps = rbind(fastest_laps,x)
 }
 fastest_laps
 ```
+
 
