@@ -1,7 +1,9 @@
 ---
 title: "Bayesian Models"
 author: "Luan Vieira"
-output: html_document
+output:  
+  html_document:
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -9,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 Loading packages
-```{r,message=FALSE}
+```{r}
 library(MCMCvis)
 library("R2jags")
 library("readxl")
@@ -18,7 +20,7 @@ library("AICcmodavg")
 
 Loading data
 
-```{r, message = FALSE}
+```{r}
 df = read_excel("./files/Races_cleaned.xlsx")
 df$TyreType = as.factor(df$TyreType)
 one_hot_encoded = model.matrix(~TyreType - 1, df)
@@ -27,7 +29,7 @@ df = cbind(df,one_hot_encoded)
 
 Setting parameters for jags models
 
-```{r, message = FALSE}
+```{r}
 y = as.numeric(unlist(df[,'msLapTime']))
 x1 = as.numeric(unlist(df[,'LapNumber']))
 x2 = as.numeric(unlist(df[,'TyreLife']))
@@ -47,7 +49,7 @@ n_drivers <- length(unlist(unique(df['LastName'])))
 
 Optional - load previously run models
 
-```{r,message=FALSE}
+```{r}
 load("./files/Models/modelo 1b.rda")
 load("./files/Models/modelo 2b.rda")
 load("./files/Models/modelo 3b.rda")
@@ -57,7 +59,7 @@ load("./files/Models/modelo 5b.rda")
 
 Modelo 1
 
-```{r, message = FALSE}
+```{r}
 mod_1 <- "model{
   #likelihood
   for (i in 1:n){
@@ -82,19 +84,19 @@ mod_1 <- "model{
 }"
 ```
 
-```{r, message = FALSE}
+```{r}
 writeLines(mod_1, "./files/Models/mod_1.jags")
 data_1 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n") 
 param_1 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y") 
 ```
 
-```{r, message = FALSE}
+```{r}
 inits_1 <- function(){
   list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1)
 }
 ```
 
-```{r, message = FALSE}
+```{r}
 mod1.jags <- jags(data = data_1,
                   inits = inits_1,
                   parameters.to.save = param_1,
@@ -111,7 +113,7 @@ mod1.jags$BUGSoutput$DIC
 
 Modelo 2
 
-```{r, message = FALSE}
+```{r}
 mod_2 <- "model{
   #likelihood
   for (i in 1:n){
@@ -136,19 +138,19 @@ mod_2 <- "model{
 }"
 ```
 
-```{r, message = FALSE}
+```{r}
 writeLines(mod_2, "./files/Models/mod_2.jags")
 data_2 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","x5") #Adiciona x5
 param_2 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5") #adiciona b5 
 ```
 
-```{r, message = FALSE}
+```{r}
 inits_2 <- function(){
   list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5"= 1, sigma.y = 1)
 }
 ```
 
-```{r, message = FALSE}
+```{r}
 mod2.jags <- jags(data = data_2,
                   inits = inits_2,
                   parameters.to.save = param_2,
@@ -159,14 +161,14 @@ mod2.jags <- jags(data = data_2,
 save(mod2.jags, file = "./files/Models/modelo 2b.rda")
 ```
 
-```{r, message = FALSE}
+```{r}
 mod2.jags$BUGSoutput$summary
 mod2.jags$BUGSoutput$DIC
 ```
 
 Modelo 3
 
-```{r, message = FALSE}
+```{r}
 mod_3 <- "model{
   #likelihood
   for (i in 1:n){
@@ -202,19 +204,19 @@ mod_3 <- "model{
 }"
 ```
 
-```{r, message = FALSE}
+```{r}
 writeLines(mod_3, "./files/Models/mod_3.jags")
 data_3 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits") #Adiciona c, n_circuits
 param_3 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u") #adiciona sigma.u
 ```
 
-```{r, message = FALSE}
+```{r}
 inits_3 <- function(){
   list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits)) #adiciona sigma.u = rep(1,n_circuits)
 }
 ```
 
-```{r, message = FALSE}
+```{r}
 mod3.jags <- jags(data = data_3,
                   inits = inits_3,
                   parameters.to.save = param_3,
@@ -225,14 +227,14 @@ mod3.jags <- jags(data = data_3,
 save(mod3.jags, file = "./files/Models/modelo 3b.rda")
 ```
 
-```{r, message = FALSE}
+```{r}
 mod3.jags$BUGSoutput$summary
 mod3.jags$BUGSoutput$DIC
 ```
 
 Modelo 4
 
-```{r, message = FALSE}
+```{r}
 mod_4 <- "model{
   #likelihood
   for (i in 1:n){
@@ -278,19 +280,19 @@ mod_4 <- "model{
 
 ```
 
-```{r, message = FALSE}
+```{r}
 writeLines(mod_4, "./files/Models/mod_4.jags")
 data_4 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") #Adiciona d, n_drivers
 param_4 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u","sigma.v") #adiciona sigma.u
 ```
 
-```{r, message = FALSE}
+```{r}
 inits_4 <- function(){
   list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits), sigma.v = rep(1,n_drivers))
 }
 ```
 
-```{r, message = FALSE}
+```{r}
 mod4.jags <- jags(data = data_4,
                   inits = inits_4,
                   parameters.to.save = param_4,
@@ -301,14 +303,14 @@ mod4.jags <- jags(data = data_4,
 save(mod4.jags, file = "./files/Models/modelo 4b.rda")
 ```
 
-```{r, message = FALSE}
+```{r}
 mod4.jags$BUGSoutput$summary
 mod4.jags$BUGSoutput$DIC
 ```
 
 Modelo 5
 
-```{r, message = FALSE}
+```{r}
 mod_5 <- "model{
   #likelihood
   for (i in 1:n){
@@ -357,19 +359,19 @@ mod_5 <- "model{
 
 ```
 
-```{r, message = FALSE}
+```{r}
 writeLines(mod_5, "./files/Models/mod_5.jags")
 data_5 <- list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") 
 param_5 <- c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","sigma.y","b5","sigma.u","sigma.v","sigma.w") #adiciona sigma.w
 ```
 
-```{r, message = FALSE}
+```{r}
 inits_5 <- function(){
   list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, sigma.y = 1, sigma.u = rep(1,n_circuits), sigma.v = rep(1,n_drivers), sigma.w = rep(1,n_circuits))
 }
 ```
 
-```{r, message = FALSE}
+```{r}
 mod5.jags <- jags(data = data_5,
                   inits = inits_5,
                   parameters.to.save = param_5,
@@ -380,19 +382,19 @@ mod5.jags <- jags(data = data_5,
 save(mod5.jags, file = "./files/Models/modelo 5b.rda")
 ```
 
-```{r, message = FALSE}
+```{r}
 mod5.jags$BUGSoutput$summary
 mod5.jags$BUGSoutput$DIC
 ```
 
-```{r, message = FALSE}}
+```{r}}
 MCMCplot(object = mod5.jags,
          params = c('b1','b2','b3_1','b3_2','b3_3','b3_4','b3_5','b4','b5','sigma.y'), 
          labels = c('LapNumber','TyreLife','C1','C2','C3','C4','C5','GridPosition','CircuitLength','sigma y'),
          ci = c(2.5,97.5))
 ```
 
-```{r, message = FALSE}
+```{r}
 MCMCplot(object = mod5.jags,
          params = "sigma.u", 
          labels = levels(c),
@@ -400,7 +402,7 @@ MCMCplot(object = mod5.jags,
          ci = c(2.5,97.5))
 ```
 
-```{r, message = FALSE}
+```{r}
 MCMCplot(object = mod5.jags,
          params = "sigma.v", 
          labels = levels(d),
@@ -408,7 +410,7 @@ MCMCplot(object = mod5.jags,
          ci = c(2.5,97.5))
 ```
 
-```{r, message = FALSE}
+```{r}
 MCMCplot(object = mod5.jags,
          params = "sigma.w", 
          labels = levels(c),
