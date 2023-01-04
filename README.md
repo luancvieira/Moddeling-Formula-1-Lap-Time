@@ -4,7 +4,7 @@ This project will consider data from races from the 2022 Formula 1 World Competi
 
 This project accessed data from [FastF1](https://theoehrly.github.io/Fast-F1/) python package, which collects data from [Ergast API](http://ergast.com/mrd/).
 
-- [X] [Start exploring the package [Package Exploration](1.%20Package%20exploration.ipynb).]
+- [X] Start exploring the package [Package Exploration](1.%20Package%20exploration.ipynb).
 
 - [X] Collect and store data [Spreadsheets generation](2.%20Spreadsheets%20generation.ipynb).
 
