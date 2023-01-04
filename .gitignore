@@ -1,3 +1,6 @@
 files/
+4.-Plots_files/
+5.-Data-Models_files/
 *.html
 *.tex
+*.Rmd
