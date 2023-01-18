@@ -14,4 +14,4 @@ This project accessed data from [FastF1](https://theoehrly.github.io/Fast-F1/) p
 
 - [X] Plot gear change for the fastest laps of each circuit [Gear Plot](4.1%20Plot%20Fastest%20Lap%20Gear%20Change.ipynb).
 
-- [X] Data Modelling using JAGS and R [Data Models](5.DataModels.md).
+- [X] Bayesian Data Modelling using JAGS and R [Data Models](5.DataModels.md).
