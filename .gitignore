@@ -2,3 +2,4 @@ files/
 *.html
 *.tex
 *.Rmd
+*.RDataTmp

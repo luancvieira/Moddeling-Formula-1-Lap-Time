@@ -1,0 +1,28 @@
+model clear
+data clear
+load dic
+model in "./files/Models/mod_5.jags"
+cd "C:/Users/PC/Documents/GitHub/Modelling-Formula-1-Lap-Time"
+data in "jagsdata.txt"
+compile, nchains(2)
+inits in "jagsinits1.txt", chain(1)
+inits in "jagsinits2.txt", chain(2)
+initialize
+update 1e+05, by(4000)
+monitor b1, thin(100)
+monitor b2, thin(100)
+monitor b3_1, thin(100)
+monitor b3_2, thin(100)
+monitor b3_3, thin(100)
+monitor b3_4, thin(100)
+monitor b3_5, thin(100)
+monitor b4, thin(100)
+monitor sigma.y, thin(100)
+monitor b5, thin(100)
+monitor int_circuito, thin(100)
+monitor int_piloto, thin(100)
+monitor slope_circuito, thin(100)
+monitor y.hat, thin(100)
+monitor deviance, thin(100)
+update 1e+05, by(4000)
+coda *
