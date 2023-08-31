@@ -1,0 +1,811 @@
+---
+title: "Bayesian Models"
+author: "Luan Vieira"
+output:  
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading packages
+```{r}
+library("R2jags")
+library("readxl")
+library("AICcmodavg")
+library("dplyr")
+library("ggplot2")
+```
+
+Loading data
+
+```{r}
+df = read_excel("./files/Races_cleaned.xlsx")
+df$TyreType = as.factor(df$TyreType)
+one_hot_encoded = model.matrix(~TyreType - 1, df)
+df = cbind(df,one_hot_encoded)
+df = df %>% rename('Local' = "PlaceBrazilianPortuguese")
+```
+
+Setting parameters for jags models
+
+```{r}
+y = as.numeric(unlist(df[,'msLapTime']))
+x1 = as.numeric(unlist(df[,'LapNumber']))
+x2 = as.numeric(unlist(df[,'TyreLife']))
+x3_1 = as.factor(unlist(df[,'TyreTypeC1']))
+x3_2 = as.factor(unlist(df[,'TyreTypeC2']))
+x3_3 = as.factor(unlist(df[,'TyreTypeC3']))
+x3_4 = as.factor(unlist(df[,'TyreTypeC4']))
+x3_5 = as.factor(unlist(df[,'TyreTypeC5']))
+x4 = as.numeric(unlist(df[,'GridPosition']))
+x5 = as.numeric(unlist(df[,'CircuitLength']))
+c = as.factor(unlist(df['Local']))
+d = as.factor(unlist(df['LastName']))
+n = length(y)
+n_circuits = length(unlist(unique(df['Local'])))
+n_drivers = length(unlist(unique(df['LastName'])))
+```
+
+Optional - load previously run models
+
+```{r}
+load("./files/Models/modelo 1b.rda")
+load("./files/Models/modelo 2b.rda")
+load("./files/Models/modelo 3b.rda")
+load("./files/Models/modelo 4b.rda")
+load("./files/Models/modelo 5b.rda")
+```
+
+Modelo 1
+
+```{r, eval = FALSE}
+mod_1 = "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    residuo[i] = y[i] - y.hat[i]
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] = 0 + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i]
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.001)
+  b2 ~ dnorm(0,0.001)
+  b3_1 ~ dnorm(0,0.001)
+  b3_2 ~ dnorm(0,0.001)
+  b3_3 ~ dnorm(0,0.001)
+  b3_4 ~ dnorm(0,0.001)
+  b3_5 ~ dnorm(0,0.001)
+  b5 ~ dnorm(0,0.001)
+ 
+  tau.y = pow(var.y, -1)
+  var.y = pow(invvar.y,-1)
+  invvar.y ~ dgamma(0.01,0.01)
+}"
+```
+
+```{r, eval = FALSE}
+writeLines(mod_1, "./files/Models/mod_1.jags")
+data_1 = list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","n") 
+param_1 = c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","var.y","y.hat") 
+```
+
+```{r, eval = FALSE}
+inits_1 = function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b5" = 1, "invvar.y" = 1)
+}
+```
+
+```{r, eval = FALSE}
+mod1.jags = jags(data = data_1,
+                  inits = inits_1,
+                  parameters.to.save = param_1,
+                  n.iter = 100000,
+                  n.chains = 2,
+                  model.file = "./files/Models/mod_1.jags")
+save(mod1.jags, file = "./files/Models/modelo 1b.rda")
+```
+
+
+```{r R.options=list(max.print=100), message=FALSE, eval = FALSE}
+mod1.jags$BUGSoutput$summary
+mod1.jags$BUGSoutput$DIC
+```
+
+Modelo 2
+
+```{r, eval = FALSE}
+mod_2 = "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    residuo[i] = y[i] - y.hat[i]
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] = (0 + b4 * x4[i] + b5 * x5[i] ) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] 
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.001)
+  b2 ~ dnorm(0,0.001)
+  b3_1 ~ dnorm(0,0.001)
+  b3_2 ~ dnorm(0,0.001)
+  b3_3 ~ dnorm(0,0.001)
+  b3_4 ~ dnorm(0,0.001)
+  b3_5 ~ dnorm(0,0.001)
+  b4 ~ dnorm(0,0.001)
+  b5 ~ dnorm(0,0.001)
+  
+  tau.y = pow(var.y, -1)
+  var.y = pow(invvar.y,-1)
+  invvar.y ~ dgamma(0.01,0.01)
+}"
+```
+
+```{r, eval = FALSE}
+writeLines(mod_2, "./files/Models/mod_2.jags")
+data_2 = list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","x5") #Adiciona x4, x5
+param_2 = c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","var.y","b5","y.hat") #adiciona b4, b5
+```
+
+```{r, eval = FALSE}
+inits_2 = function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5"= 1, "invvar.y" = 1)
+}
+```
+
+```{r, eval = FALSE}
+mod2.jags = jags(data = data_2,
+                  inits = inits_2,
+                  parameters.to.save = param_2,
+                  n.iter = 100000,
+                  n.chains = 2,
+                  model.file = "./files/Models/mod_2.jags")
+
+save(mod2.jags, file = "./files/Models/modelo 2b.rda")
+```
+
+```{r R.options=list(max.print=100), eval = FALSE}
+mod2.jags$BUGSoutput$summary
+mod2.jags$BUGSoutput$DIC
+```
+
+Modelo 3
+
+```{r, eval = FALSE}
+mod_3 = "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    residuo[i] = y[i] - y.hat[i]
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] = (0 + b4 * x4[i] + b5 * x5[i] + int_circuito[c[i]]) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i]  # adiciona int_circuito[c[i]]
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+}
+  
+  #prior
+  b1 ~ dnorm(0,0.001)
+  b2 ~ dnorm(0,0.001)
+  b3_1 ~ dnorm(0,0.001)
+  b3_2 ~ dnorm(0,0.001)
+  b3_3 ~ dnorm(0,0.001)
+  b3_4 ~ dnorm(0,0.001)
+  b3_5 ~ dnorm(0,0.001)
+  b4 ~ dnorm(0,0.001)
+  b5 ~ dnorm(0,0.001)
+  
+  tau.y = pow(var.y, -1)
+  var.y = pow(invvar.y,-1)
+  invvar.y ~ dgamma(0.01,0.01)
+  
+  for (c in 1:n_circuits){
+    tau.u[c] = pow(var.u[c],-1)
+    var.u[c] = pow(invvar.u[c],-1)
+    invvar.u[c] ~ dgamma(0.001,0.001)
+}
+  
+}"
+```
+
+```{r, eval = FALSE}
+writeLines(mod_3, "./files/Models/mod_3.jags")
+data_3 = list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits") #Adiciona c, n_circuits
+param_3 = c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","var.y","var.u","b5","int_circuito","y.hat") #adiciona sigma.u
+```
+
+```{r, eval = FALSE}
+inits_3 = function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, "invvar.y" = 1, invvar.u = rep(1,n_circuits)) #adiciona sigma.u = rep(1,n_circuits)
+}
+```
+
+```{r, eval = FALSE}
+mod3.jags = jags(data = data_3,
+                  inits = inits_3,
+                  parameters.to.save = param_3,
+                  n.iter = 100000,
+                  n.chains = 2,
+                  model.file = "./files/Models/mod_3.jags")
+
+save(mod3.jags, file = "./files/Models/modelo 3b.rda")
+```
+
+```{r R.options=list(max.print=100), eval = FALSE}
+mod3.jags$BUGSoutput$summary
+mod3.jags$BUGSoutput$DIC
+```
+
+Modelo 4
+
+
+```{r, eval = FALSE}
+mod_4 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    residuo[i] <- y[i] - y.hat[i]
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b4 * x4[i] + b5 * x5[i] + int_circuito[c[i]] + int_piloto[d[i]]) + b1 * x1[i] + b2*x2[i] +b3_1 * x3_1[i] +b3_2 * x3_2[i] +b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]  # adiciona int_piloto[d[i]]
+    
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+  }
+      
+  for (d in 1:n_drivers){
+        int_piloto[d] ~ dnorm(0,tau.v[d])
+  }
+  
+  #prior
+  b1 ~ dnorm(0,0.001)
+  b2 ~ dnorm(0,0.001)
+  b3_1 ~ dnorm(0,0.001)
+  b3_2 ~ dnorm(0,0.001)
+  b3_3 ~ dnorm(0,0.001)
+  b3_4 ~ dnorm(0,0.001)
+  b3_5 ~ dnorm(0,0.001)
+  b4 ~ dnorm(0,0.001)
+  b5 ~ dnorm(0,0.001)
+  
+  tau.y <- pow(var.y, -1)
+  var.y <- pow(invvar.y, -1)
+  invvar.y ~ dgamma(0.001,0.001)
+
+  
+  for (c in 1:n_circuits){
+    tau.u[c] <- pow(var.u[c],-1)
+    var.u[c] <- pow(invvar.u[c],-1)
+    invvar.u[c] ~  dgamma(0.001, 0.001)
+  }
+
+  for (d in 1:n_drivers){
+    tau.v[d] <- pow(var.v[d],-1)
+    var.v[d] <- pow(invvar.v[d],-1)
+    invvar.v[d] ~  dgamma(0.001, 0.001)
+  }
+  
+
+}"
+
+
+```
+
+```{r, eval = FALSE}
+writeLines(mod_4, "./files/Models/mod_4.jags")
+data_4 = list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") #Adiciona d, n_drivers
+param_4 = c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","b5","var.y","var.u","var.v","int_circuito", "int_piloto","y.hat") #adiciona sigma.u
+```
+
+```{r, eval = FALSE}
+inits_4 = function(){
+  list("b1"= 1,"b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1,  invvar.u = rep(1,n_circuits), invvar.v = rep(1,n_drivers) )
+}
+```
+
+```{r, eval = FALSE}
+mod4.jags = jags.parallel(data = data_4,
+                  inits = inits_4,
+                  parameters.to.save = param_4,
+                  n.iter = 100000,
+                  n.chains = 2,
+                  model.file = "./files/Models/mod_4.jags")
+```
+
+```{r R.options=list(max.print=100), eval = FALSE}
+mod4.jags$BUGSoutput$DIC
+mod4.jags$BUGSoutput$summary
+```
+
+Modelo 5
+
+```{r, eval = FALSE}
+mod_5 <- "model{
+  #likelihood
+  for (i in 1:n){
+    #likelihood
+    residuo[i] <- y[i] - y.hat[i]
+    y[i] ~ dnorm(y.hat[i],tau.y)
+    y.hat[i] <- (0 + b4 * x4[i] + b5 * x5[i] + int_circuito[c[i]] + int_piloto[d[i]])  + (slope_circuito[c[i]]) * x1[i] + b2*x2[i] + b3_1 * x3_1[i] + b3_2 * x3_2[i] + b3_3 * x3_3[i] + b3_4 * x3_4[i] + b3_5 * x3_5[i] + b4 * x4[i]  # adiciona slope_circuito[c[i]]
+  }
+  
+  for (c in 1:n_circuits){
+        int_circuito[c] ~ dnorm(0,tau.u[c])
+        slope_circuito[c] ~ dnorm(0,tau.w[c])
+  }
+      
+  for (d in 1:n_drivers){
+        int_piloto[d] ~ dnorm(0,tau.v[d])
+  }
+  
+  #prior
+  b2 ~ dnorm(0,0.001)
+  b3_1 ~ dnorm(0,0.001)
+  b3_2 ~ dnorm(0,0.001)
+  b3_3 ~ dnorm(0,0.001)
+  b3_4 ~ dnorm(0,0.001)
+  b3_5 ~ dnorm(0,0.001)
+  b4 ~ dnorm(0,0.001)
+  b5 ~ dnorm(0,0.001)
+  
+  tau.y <- pow(var.y, -1)
+  var.y <- pow(invvar.y, -1)
+  invvar.y ~ dgamma(0.001,0.001)
+
+  
+  for (c in 1:n_circuits){
+    tau.u[c] <- pow(var.u[c],-1)
+    var.u[c] <- pow(invvar.u[c],-1)
+    invvar.u[c] ~  dgamma(0.001, 0.001)
+    
+    tau.w[c] <- pow(var.w[c],-1)
+    var.w[c] <- pow(invvar.w[c],-1)
+    invvar.w[c] ~  dgamma(0.001, 0.001)
+  }
+
+  for (d in 1:n_drivers){
+    tau.v[d] <- pow(var.v[d],-1)
+    var.v[d] <- pow(invvar.v[d],-1)
+    invvar.v[d] ~  dgamma(0.001, 0.001)
+  }
+
+}"
+
+```
+
+
+```{r, eval = FALSE}
+writeLines(mod_5, "./files/Models/mod_5.jags")
+data_5 = list("y","x1","x2","x3_1","x3_2","x3_3","x3_4","x3_5","x4","n","c","x5","n_circuits","d","n_drivers") 
+param_5 = c("b2","b3_1","b3_2","b3_3","b3_4","b3_5","b4","b5","var.y","var.u","var.v","var.w","int_circuito", "int_piloto", "slope_circuito","y.hat","sigma.u","sigma.v","sigma.w") 
+```
+
+```{r, eval = FALSE}
+inits_5 = function(){
+  list("b2"= 1,"b3_1"=1,"b3_2"=1,"b3_3"=1,"b3_4"=1,"b3_5"=1,"b4"= 1,"b5" = 1, "invvar.u" = rep(1,n_circuits), "invvar.v" = rep(1,n_drivers), "invvar.w" = rep(1,n_circuits))
+}
+```
+
+
+```{r, eval = FALSE}
+mod5.jags = jags.parallel(data = data_5,
+                  inits = inits_5,
+                  parameters.to.save = param_5,
+                  n.iter = 100000,
+                  n.chains = 2,
+                  model.file = "./files/Models/mod_5.jags")
+
+#save(mod5.jags, file = "./files/Models/modelo 5b.rda")
+```
+
+```{r R.options=list(max.print=10), eval = FALSE}
+mod5.jags$BUGSoutput$DIC
+mod5.jags$BUGSoutput$summary
+```
+
+
+```{r}
+timeMS_formatter = function(x) {
+  x[is.na(x)] = 0
+# h = trunc(x / 24 / 60 / 1000)
+  m = trunc(x / 60 / 1000)
+  s = floor(abs(x)/1000) %% 60
+  s = round(s, 2)
+  lab = sprintf('%02dmin:%02ds', m, s) # Format the strings as MM:SS
+  lab = gsub('^00h:', '', lab)              # Remove leading 00: if present
+  lab = gsub('^0', '', lab)                # Remove leading 0 if present
+  lab
+}
+
+timeS_formatter = function(x) {
+  x[is.na(x)] = 0
+  s = floor(abs(x)/1000)
+  ms = abs(x) %% 1000
+  s = ifelse(x<0, -s, s)
+  lab = sprintf('%ds:%03dms', s, ms) 
+  lab = ifelse(substr(lab,1,1) == '0' & x <0 , paste("-",lab,sep= ""), lab)
+  lab
+}
+
+
+timeH_formatter = function(x) {
+  x[is.na(x)] = 0
+  h = trunc(x / 60 / 60 / 1000)
+  m = trunc(x / 60 / 1000) %% 60
+  s = floor(abs(x)/1000) %% 60
+  s = round(s, 2)
+  lab = sprintf('%02dh:%02dmin:%02ds', h, m, s) # Format the strings as MM:SS
+  lab = gsub('^00h:', '', lab)              # Remove leading 00: if present
+  lab = gsub('^0', '', lab)                # Remove leading 0 if present
+  lab
+}
+```
+
+
+
+## Analisando modelo 5
+
+```{r R.options=list(max.print=100)}
+model_data = data.frame(mod5.jags$BUGSoutput$summary)
+model_data
+```
+
+```{r R.options=list(max.print=100)}
+model_data = cbind(rownames(model_data), data.frame(model_data, row.names=NULL))
+colnames(model_data)[1] = "parameters"
+model_data
+```
+
+
+```{r R.options=list(max.print=100)}
+levels(c)
+levels(d)
+model_data$parameters
+```
+
+```{r}
+filter_values1 = c("b1","b2","b3_1","b3_2","b3_3","b3_4","b3_5")
+
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_1 = model_data %>% 
+                filter(parameters
+                        %in% filter_values1)
+model_data_1
+```
+## Efeitos Fixos
+
+
+```{r}
+ggplot(model_data_1, aes(x = parameters, y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = X2.5., ymax = X97.5.), width = 0.2) +
+  scale_y_continuous(limits = c(-150,150), label=timeS_formatter, breaks = seq(-150,150,50)) + 
+  coord_flip() +
+  scale_x_discrete(labels = c('Vida do pneu', 'Pneu C1', 'Pneu C2', 'Pneu C3', 'Pneu C4', 'Pneu C5')) +
+  xlab("") + ylab("") + ggtitle("Efeitos das variáveis das voltas") + 
+  theme(plot.title = element_text(hjust = 0.5), axis.text.y = element_text(size = 13))
+```
+##Covariaveis circuito e piloto
+
+```{r}
+filter_values2 = c("b4","b5")
+
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_2 = model_data %>% 
+                filter(parameters
+                        %in% filter_values2)
+model_data_2
+```
+
+```{r}
+ggplot(model_data_2, aes(x = parameters, y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = X2.5., ymax = X97.5.), width = 0.2) +
+  scale_y_continuous(label=timeS_formatter) + #limits = c(0,200) breaks = seq(0,200,50)
+  coord_flip() +
+  scale_x_discrete(labels = c('Grid Position', 'Tamanho do circuito')) +
+  xlab("") + ylab("") + ggtitle("Efeitos das covariáveis dos circuitos e pilotos") + 
+  theme(plot.title = element_text(hjust = 0.5), axis.text.y = element_text(size = 13))
+```
+
+## Efeitos aleatórios no coeficiente angular da covariável número da volta
+
+```{r}
+indices = grep("^slope_circuito", model_data$parameters)
+filter_values3 = model_data$parameters[indices]
+```
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_3 = model_data %>% filter(parameters %in% filter_values3)
+model_data_3
+```
+
+```{r}
+ggplot(model_data_3, aes(x = factor(parameters, levels = parameters), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = X2.5., ymax = X97.5.), width = 0.5) +
+  scale_y_continuous(limits = c(-150,0), label=timeS_formatter, breaks = seq(-150,0,50)) + 
+  coord_flip() + 
+  scale_x_discrete(labels = levels(c)) +
+  xlab("") + ylab("")+labs(title = "Efeito aleatório no coeficiente angular da variável número da volta")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Efeitos aleatórios no intercepto do circuito
+
+```{r}
+indices = grep("^int_circuito", model_data$parameters)
+filter_values4 = model_data$parameters[indices]
+```
+
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_4 = model_data %>% filter(parameters %in% filter_values4)
+model_data_4
+```
+
+```{r}
+ggplot(model_data_4, aes(x = factor(parameters, levels = parameters), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = X2.5., ymax = X97.5.), width = 0.5) +
+  scale_y_continuous(limits = c(70000,120000), label=timeMS_formatter, breaks = seq(70000,120000,10000)) + 
+  coord_flip() + 
+  scale_x_discrete(labels = levels(c)) +
+  xlab("") + ylab("") +labs(title = "Efeito aleatório no intercepto por circuito")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Efeitos aleatórios no intercepto do piloto
+
+```{r}
+indices = grep("^int_piloto", model_data$parameters)
+filter_values5 = model_data$parameters[indices]
+```
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_5 = model_data %>% filter(parameters %in% filter_values5)
+model_data_5
+```
+
+
+```{r}
+ggplot(model_data_5, aes(x = factor(parameters, levels = parameters), y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = X2.5., ymax = X97.5.), width = 0.2) +
+  scale_y_continuous(limits = c(-2000,2000), label=timeS_formatter, breaks = seq(-2000,2000,500)) + 
+  coord_flip() +
+  scale_x_discrete(labels = levels(d)) +
+  xlab("") + ylab("") +labs(title = "Efeito aleatório no intercepto por piloto")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r R.options=list(max.print=100)}
+indices = grep("^y.hat", model_data$parameters)
+data = model_data[indices,]
+data = cbind(data,y)
+data
+```
+
+
+
+```{r}
+ggplot(data, aes(x = y, y = mean)) +  
+  geom_point(alpha = 0.2) +
+  scale_x_continuous(limits = c(67000,120000), label=timeMS_formatter, breaks = c(70000,80000,90000,100000,110000,120000)) +
+  scale_y_continuous(limits = c(67000,120000), label=timeMS_formatter, breaks = c(70000,80000,90000,100000,110000,120000)) +
+  xlab("Valores observados") + ylab("Valores ajustados") + 
+  #geom_segment(data = data.frame(y = data$X2.5., x = data$mean, 
+  #                               xend = data$mean,  yend = data$X97.5.), 
+  #             aes(x, y, xend = xend, yend = yend),
+  #             inherit.aes = FALSE, linetype = 2) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(data, aes(x = y - mean)) +  
+  geom_histogram() +
+  scale_x_continuous(label=timeS_formatter,breaks = seq(-5000,15000,2000)) + 
+  xlab("Resíduos") + ylab("Freq") + 
+  #geom_segment(data = data.frame(y = data$X2.5., x = data$mean, 
+  #                               xend = data$mean,  yend = data$X97.5.), 
+  #             aes(x, y, xend = xend, yend = yend),
+  #             inherit.aes = FALSE, linetype = 2) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+```{r}
+ggplot(data, aes(x = X97.5. - X2.5., y = mean)) +
+geom_point(alpha = 0.2) + 
+scale_x_continuous(limits = c(100,300), label=timeS_formatter, breaks = seq(100,300,50)) +
+scale_y_continuous(limits = c(67000,120000), label=timeMS_formatter, breaks = c(70000,80000,90000,100000,110000,120000)) +
+xlab("Comprimento dos intervalos de 95% de credibilidade dos valores ajustados") + ylab("Média a posteriori dos valores ajustados") + 
+theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r,eval = FALSE}
+error_model1 = array(NA, dim = c(2000, n))
+for (j in 1:2000){
+  for (i in 1:n){
+    error_model1[j,i] = mod1.jags$BUGSoutput$sims.list$y.hat[j,i] - y[i]
+  }
+}
+
+error_model2 = array(NA, dim = c(2000, n))
+for (j in 1:2000){
+  for (i in 1:n){
+    error_model2[j,i] = mod2.jags$BUGSoutput$sims.list$y.hat[j,i] - y[i]
+  }
+}
+
+error_model3 = array(NA, dim = c(2000, n))
+for (j in 1:2000){
+  for (i in 1:n){
+    error_model3[j,i] = mod3.jags$BUGSoutput$sims.list$y.hat[j,i] - y[i]
+  }
+}
+
+error_model4 = array(NA, dim = c(2000, n))
+for (j in 1:2000){
+  for (i in 1:n){
+    error_model4[j,i] = mod4.jags$BUGSoutput$sims.list$y.hat[j,i] - y[i]
+  }
+}
+
+error_model5 = array(NA, dim = c(2000, n))
+for (j in 1:2000){
+  for (i in 1:n){
+    error_model5[j,i] = mod5.jags$BUGSoutput$sims.list$y.hat[j,i] - y[i]
+  }
+}
+
+```
+
+```{r,eval = FALSE}
+# Values
+pD1 = mod1.jags$BUGSoutput$pD
+pD2 = mod2.jags$BUGSoutput$pD
+pD3 = mod3.jags$BUGSoutput$pD
+pD4 = mod4.jags$BUGSoutput$pD
+pD5 = mod5.jags$BUGSoutput$pD
+
+D1 = mean(mod1.jags$BUGSoutput$sims.list$deviance)
+D2 = mean(mod2.jags$BUGSoutput$sims.list$deviance)
+D3 = mean(mod3.jags$BUGSoutput$sims.list$deviance)
+D4 = mean(mod4.jags$BUGSoutput$sims.list$deviance)
+D5 = mean(mod5.jags$BUGSoutput$sims.list$deviance)
+
+dic1 = mod1.jags$BUGSoutput$DIC
+dic2 = mod2.jags$BUGSoutput$DIC
+dic3 = mod3.jags$BUGSoutput$DIC
+dic4 = mod4.jags$BUGSoutput$DIC
+dic5 = mod5.jags$BUGSoutput$DIC
+
+mse1 = mean((error_model1^2)/n)
+mse2 = mean((error_model2^2)/n)
+mse3 = mean((error_model3^2)/n)
+mse4 = mean((error_model4^2)/n)
+mse5 = mean((error_model5^2)/n)
+
+models = c("Model 1", "Model 2", "Model 3", "Model 4", "Model 5")
+pD = c(pD1, pD2, pD3, pD4, pD5)
+D = c(D1, D2, D3, D4, D5)
+DIC = c(dic1, dic2, dic3, dic4, dic5)
+mse = c(mse1, mse2, mse3, mse4, mse5)
+
+# Create the data frame
+table = data.frame(models, pD,D,DIC, mse)
+table
+```
+
+
+
+```{r}
+indices = grep("^var.u", model_data$parameters)
+filter_values6 = model_data$parameters[indices]
+```
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_6 = model_data %>% filter(parameters %in% filter_values6)
+model_data_6
+```
+
+```{r}
+mediana_6 = array(NA, dim = n_circuits)
+for (i in 1:n_circuits){
+  mediana_6[i] = median(sqrt(mod5.jags$BUGSoutput$sims.list$var.u[,i]))
+}
+
+model_data_6 = cbind(model_data_6,mediana_6)
+```
+
+
+
+```{r}
+ggplot(model_data_6, aes(x = factor(parameters, levels = parameters), y = mediana_6)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = sqrt(X2.5.), ymax = sqrt(X97.5.)), width = 0.5) +
+  scale_y_continuous(label=timeH_formatter,limits = c(0, 5000000), breaks = seq(0,4800000,1200000)) + 
+  coord_flip() + 
+  scale_x_discrete(labels = levels(c)) +
+  xlab("") + ylab("")+labs(title = "Desvio padrão do efeito aleatório no intercepto por circuito")+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = timeMS_formatter(round(mediana_6,0))), nudge_x = 0.5, size = 2)
+```
+
+```{r}
+indices = grep("^var.v", model_data$parameters)
+filter_values7 = model_data$parameters[indices]
+```
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_7 = model_data %>% filter(parameters %in% filter_values7)
+model_data_7
+```
+```{r}
+mediana_7 = array(NA, dim = n_drivers)
+for (i in 1:n_drivers){
+  mediana_7[i] = median(sqrt(mod5.jags$BUGSoutput$sims.list$var.v[,i]))
+}
+
+model_data_7 = cbind(model_data_7,mediana_7)
+```
+
+
+```{r}
+ggplot(model_data_7, aes(x = factor(parameters, levels = parameters), y = mediana_7)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = sqrt(X2.5.), ymax = sqrt(X97.5.)), width = 0.5) +
+  scale_y_continuous(label=timeS_formatter, limits= c(0,60000), breaks = seq(0,60000,15000)) + 
+  coord_flip() + 
+  scale_x_discrete(labels = levels(d)) +
+  xlab("") + ylab("")+labs(title = "Desvio padrão do efeito aleatório no intercepto por piloto")+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = timeS_formatter(round(mediana_7,0))), nudge_x = 0.5, size = 2)
+```
+
+
+
+```{r}
+indices = grep("^var.w", model_data$parameters)
+filter_values8 = model_data$parameters[indices]
+```
+
+```{r}
+# Filter the data frame to only include rows where y is in the filter_values list
+model_data_8 = model_data %>% filter(parameters %in% filter_values8)
+model_data_8
+```
+
+```{r}
+
+mediana_8 = array(NA, dim = n_circuits)
+for (i in 1:n_circuits){
+  mediana_8[i] = median(sqrt(mod5.jags$BUGSoutput$sims.list$var.w[,i]))
+}
+
+model_data_8 = cbind(model_data_8,mediana_8)
+```
+
+```{r}
+ggplot(model_data_8, aes(x = factor(parameters, levels = parameters), y = mediana_8)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = sqrt(X2.5.), ymax = sqrt(X97.5.)), width = 0.5) +
+  scale_y_continuous(label=timeS_formatter, limits = c(0,3500),breaks = seq(0,3500,700)) + 
+  coord_flip() + 
+  scale_x_discrete(labels = levels(c)) +
+  xlab("") + ylab("")+labs(title = "Desvio padrão do efeito aleatório no\n coeficiente angular da variável número da volta")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_text(aes(label = timeS_formatter(round(mediana_8,0))), nudge_x = 0.5, size = 2)
+```
