@@ -4,7 +4,7 @@ This project will consider data from races from the 2022 Formula 1 World Competi
 
 The report can be seen here: [Report](Modelos%20Lineares%20Mistos%20com%20Efeitos%20Aleatórios%20Cruzados%20para%20Análise%20de%20Dados%20da%20Modalidade%20Automobilística%20de%20Fórmula%201.pdf).
 
-This project accessed data from [FastF1](https://theoehrly.github.io/Fast-F1/) python package, which collects data from [Ergast API](http://ergast.com/mrd/).
+This project uses [FastF1](https://theoehrly.github.io/Fast-F1/) python package, which collects data from [Ergast API](http://ergast.com/mrd/).
 
 - [X] Start exploring the package [Package Exploration](1.%20Package%20exploration.ipynb).
 
